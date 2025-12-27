@@ -1,0 +1,41 @@
+# --- C++ ---
+# Compiled Object files
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+
+# Compiled Binaries
+cpp_engine/build/
+cpp_engine/engine
+*.exe
+
+# IDE settings (VS Code / CLion)
+.vscode/
+.idea/
+*.swp
+
+# --- Python ---
+# Virtual Environments
+venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Distribution / Packaging
+dist/
+build/
+*.egg-info/
+
+# --- Angular / Node ---
+# Dependencies (The big one!)
+node_modules/
+
+# Angular Build Output
+web_dashboard/dist/
+web_dashboard/.angular/
+
+# Logs and System Files
+*.log
+.DS_Store
