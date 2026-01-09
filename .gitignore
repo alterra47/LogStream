@@ -28,9 +28,9 @@ build/
 node_modules/
 
 # Angular Build Output
-web_dashboard/*
-!web_dashboard/src
-!web_dashboard/src/*
+#web_dashboard/*
+#!web_dashboard/src
+#!web_dashboard/src/*
 
 # Logs and System Files
 *.log
