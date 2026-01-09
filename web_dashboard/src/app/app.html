@@ -1,0 +1,44 @@
+<div class="dashboard">
+  <header>
+    <h1>LogStream <span class="badge">SYSTEMS</span></h1>
+    <div class="actions">
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm" 
+        (keyup.enter)="onSearch()" 
+        placeholder="Search logs (e.g., 'timeout')..."
+        class="search-input"
+      >
+      <button (click)="onSearch()" class="btn primary">Search</button>
+      <button (click)="generateFakeLog()" class="btn secondary">Generate Data</button>
+    </div>
+  </header>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Service</th>
+          <th>Level</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of logs">
+          <td class="time">{{ log.timestamp | date:'mediumTime' }}</td>
+          <td class="mono">{{ log.service }}</td>
+          <td>
+            <span class="tag" [class.error]="log.level === 'ERROR'">
+              {{ log.level }}
+            </span>
+          </td>
+          <td>{{ log.message }}</td>
+        </tr>
+        <tr *ngIf="logs.length === 0">
+          <td colspan="4" class="empty">No logs found. Try searching.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
