@@ -1,37 +1,64 @@
-# --- C++ ---
-# Compiled Object files
-*.o
-*.obj
-*.so
-*.dylib
-*.dll
+# --- General ---
+.DS_Store
+Thumbs.db
+*.log
+*.txt
+!requirements.txt
+!CMakeLists.txt
 
-# Compiled Binaries
+# --- Visual Studio Code / IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- C++ (cpp_engine) ---
+# Ignore the entire build directory where CMake generates files
 cpp_engine/build/
-cpp_engine/engine
+# Ignore compiled binaries in case they land in root
+*.o
+*.out
 *.exe
 
-# --- Python ---
-# Virtual Environments
-venv/
+# --- Python (py_ingestor) ---
+py_ingestor/venv/
+py_ingestor/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
 env/
-__pycache__/
-*.py[cod]
+venv/
+pip-log.txt
+.pytest_cache/
 
-# Distribution / Packaging
-dist/
-build/
-*.egg-info/
+# --- C# .NET (csharp_processor) ---
+# Ignore bin, obj, Debug, and Release folders anywhere in the C# path
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+csharp_processor/**/.vs/
+*.user
+*.userosscache
+*.sln.docstates
+packages/
+*.nupkg
 
-# --- Angular / Node ---
-# Dependencies (The big one!)
-node_modules/
+# --- Angular (web_dashboard) ---
+web_dashboard/node_modules/
+web_dashboard/dist/
+web_dashboard/.angular/
+web_dashboard/.editorconfig
+web_dashboard/.cache/
 
-# Angular Build Output
-web_dashboard/*
-!web_dashboard/src/
-!web_dashboard/src/*
+# --- Project Specific Runtime Logs ---
+# These are the files created by start.sh
+cpp_log.txt
+python_log.txt
+csharp_log.txt
+web_log.txt
 
-# Logs and System Files
-*.log
-.DS_Store
+# --- Database ---
+*.sqlite
+*.db

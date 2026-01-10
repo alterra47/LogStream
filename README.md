@@ -1,95 +1,131 @@
 # LogStream: High-Performance Distributed Log Search Engine
 
-**LogStream** is a distributed log aggregation system designed for high-throughput environments. It utilizes a hybrid architecture where **C++** handles real-time in-memory indexing for sub-millisecond search speeds, while **Python** manages API orchestration and **MongoDB** ensures persistent storage.
-
-![Project Status](https://img.shields.io/badge/status-active-success.svg)
-![C++](https://img.shields.io/badge/C++-20-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)
-![Angular](https://img.shields.io/badge/Angular-17%2B-red.svg)
+**LogStream** is a distributed log aggregation system designed for high-throughput enterprise environments. It utilizes a hybrid microservices architecture where **C++** handles real-time in-memory indexing for sub-millisecond search speeds, **C# (.NET)** manages reliable persistent storage via batch processing, and **Python** orchestrates the API gateway.
 
 ## 🚀 Key Features
-* **Hybrid Storage Engine:** Combines the speed of C++ in-memory structures with the reliability of NoSQL disk storage.
+
+* **Hybrid Storage Engine:** Combines the speed of **C++ in-memory** structures with the reliability of **PostgreSQL** relational storage.
 * **Custom Inverted Index:** Implements a thread-safe inverted index algorithm (using `std::shared_mutex`) from scratch in C++ to map search terms to log IDs instantly.
-* **Microservices Architecture:** Decoupled components communicating via **ZeroMQ** and REST APIs.
-* **Real-Time Dashboard:** A lightweight, dependency-free Angular UI for live monitoring and searching.
+* **Reliable Batch Processing:** A background **C# Worker Service** buffers high-velocity logs and performs bulk inserts into SQL, ensuring zero data loss under heavy load (1000+ logs/sec).
+* **Microservices Architecture:** Decoupled components communicating via a **ZeroMQ Pub-Sub** mesh.
+* **Real-Time Dashboard:** A lightweight, dependency-free **Angular** UI for live monitoring and searching.
 
 ## 🛠 Tech Stack
 
 | Component | Technology | Role |
-| :--- | :--- | :--- |
-| **Core Engine** | **C++20** | In-memory indexing, tokenization, and search logic. |
-| **API Layer** | **Python (FastAPI)** | REST endpoints, request validation, and service orchestration. |
-| **Messaging** | **ZeroMQ** | Low-latency asynchronous communication between Python and C++. |
-| **Storage** | **MongoDB** | Persistent document storage for full log details. |
-| **Frontend** | **Angular (Standalone)** | Responsive dashboard for visualizing and querying logs. |
+| --- | --- | --- |
+| **Core Engine** | **C++20** | In-memory indexing, tokenization, and search logic (RAM). |
+| **Log Processor** | **C# (.NET 8)** | High-performance background worker for batch SQL ingestion. |
+| **API Layer** | **Python (FastAPI)** | REST endpoints, validation, and Pub-Sub orchestration. |
+| **Messaging** | **ZeroMQ** | Low-latency asynchronous communication (Pub/Sub pattern). |
+| **Storage** | **PostgreSQL** | Persistent relational storage for full log records. |
+| **Frontend** | **Angular** | Responsive dashboard for visualizing and querying logs. |
 
 ## 🏗 Architecture
 
-The system follows a "Write-Split, Read-Merge" pattern:
+The system follows a **"Fan-Out Write, Merge Read"** pattern:
 
-1.  **Ingestion:**
-    * The **Python API** receives a log entry.
-    * It assigns a unique 64-bit Timestamp ID.
-    * It **asynchronously writes** the full log to MongoDB (Disk).
-    * It **pushes** the log message to the C++ Engine via ZeroMQ (RAM).
-2.  **Indexing (C++):**
-    * The engine tokenizes the message (e.g., "Error in DB" -> `["error", "db"]`).
-    * It updates the Inverted Index: `{"error": [ID_1], "db": [ID_1]}`.
-3.  **Search:**
-    * The user queries "Error".
-    * Python asks C++ for all IDs associated with "Error".
-    * C++ returns `[ID_1, ID_5, ID_9]` in microseconds.
-    * Python fetches the full record details for those IDs from MongoDB and returns them to the UI.
+1. **Ingestion (Pub-Sub):**
+* The **Python API** receives a log entry and assigns a unique ID.
+* It **Publishes** the log to the ZeroMQ network (`tcp://*:5556`).
+* **Subscriber 1 (C++):** Instantly tokenizes and indexes the message in RAM.
+* **Subscriber 2 (C#):** Buffers the log into a thread-safe queue.
+
+
+2. **Persistence (Batching):**
+* The **C# Service** monitors its buffer.
+* Once the buffer hits 100 logs (or 500ms elapses), it performs a **Bulk Insert** into PostgreSQL.
+* This handles bursts of traffic without locking the database connection.
+
+
+3. **Search:**
+* The user queries "Error".
+* Python asks **C++** via ZeroMQ (`REQ/REP`) for all IDs matching "Error".
+* C++ returns `[ID_1, ID_5, ID_9]` in microseconds.
+* Python queries **PostgreSQL** for the full details of those specific IDs and returns them to the UI.
+
+
 
 ## ⚙️ Installation & Setup
 
 ### Prerequisites
+
 * **OS:** Linux (Arch/Ubuntu) or macOS.
-* **Dependencies:** `g++`, `cmake`, `zeromq`, `python3`, `node/npm`, `mongodb`.
+* **Dependencies:** `g++`, `cmake`, `dotnet-sdk`, `zeromq`, `python3`, `postgresql`, `node/npm`.
 
 ### 1. Start the Database
+
+Ensure PostgreSQL is running and the database `logstream_db` exists.
+
 ```bash
-sudo systemctl start mongodb
+sudo systemctl start postgresql
+# (Optional) Verify DB creation
+# sudo -u postgres psql -c "CREATE DATABASE logstream_db;"
 
 ```
 
-### 2. Build & Run the C++ Engine
+### 2. Auto-Launch System (Recommended)
+
+A master script is provided to launch all services (C++, C#, Python, Angular) in the background.
 
 ```bash
-cd cpp_engine
-mkdir build && cd build
-cmake ..
-make
-./engine
-# Output: [C++] Engine starting on tcp://*:5555...
+chmod +x start.sh
+./start.sh
+# Check logs: tail -f csharp_log.txt python_log.txt
 
 ```
 
-### 3. Start the Python API
+### Manual Startup (Alternative)
+
+<details>
+<summary>Click to expand manual commands</summary>
+
+#### A. Run C++ Engine
 
 ```bash
-cd py_ingestor
-source venv/bin/activate
-uvicorn main:app --reload
-# Output: Uvicorn running on [http://127.0.0.1:8000](http://127.0.0.1:8000)
+cd cpp_engine/build && ./engine
 
 ```
 
-### 4. Launch the Dashboard
+#### B. Run C# Processor
 
 ```bash
-cd web_dashboard
-ng serve
-# Access at http://localhost:4200
+cd csharp_processor/LogProcessor && dotnet run
 
 ```
 
-## 🧪 Testing
+#### C. Run Python API
+
+```bash
+cd py_ingestor && source venv/bin/activate && uvicorn main:app --reload
+
+```
+
+#### D. Run Dashboard
+
+```bash
+cd web_dashboard && ng serve
+
+```
+
+</details>
+
+## 🧪 Testing & Verification
 
 **Stress Test Script:**
-A Python script is included to flood the system with 1,000+ logs to demonstrate concurrency handling.
+A Python script is included to verify throughput and data integrity. It sends 1,000 logs and verifies that C++ indexed them and C# saved them.
 
 ```bash
 python stress_test.py
+
+```
+
+**Expected Output:**
+
+```text
+🚀 Starting Stress Test: Sending 1000 logs...
+✅ Ingestion Finished...
+🔍 Verifying data integrity...
+🎉 SUCCESS: 100% Data Integrity Verified!
 
 ```
